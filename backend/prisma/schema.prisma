@@ -1,0 +1,57 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id         String   @id @default(cuid())
+  name       String
+  username   String   @unique
+  email      String   @unique
+  department String
+  password   String
+  role       Role     @default(USER)
+  createdAt  DateTime @default(now())
+  tickets    Ticket[]
+
+  @@map("users")
+}
+
+model Ticket {
+  id                  String    @id @default(cuid())
+  title               String
+  description         String
+  priority            Priority
+  status              Status    @default(REQUESTED)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  completedAt         DateTime?
+  estimatedCompletion DateTime?
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  @@map("tickets")
+}
+
+enum Role {
+  USER
+  IT
+}
+
+enum Priority {
+  URGENT
+  NORMAL
+}
+
+enum Status {
+  REQUESTED
+  IN_PROGRESS
+  COMPLETED
+}

@@ -1,0 +1,17 @@
+# Arquivos de log e dependências
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Arquivos de build do front-end
+frontend/dist
+frontend/build
+
+# Arquivos de ambiente (contêm senhas e chaves!)
+.env
+backend/.env
+frontend/.env
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
