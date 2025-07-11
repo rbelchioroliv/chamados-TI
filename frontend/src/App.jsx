@@ -2,7 +2,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import { TicketProvider } from './context/TicketContext';
 import { Box, CircularProgress } from '@mui/material';
 
 // Layouts e Componentes de Rota
@@ -10,38 +9,16 @@ import DashboardLayout from './pages/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
-// Páginas Públicas
+// Páginas
 import Login from './pages/auth/Login';
 import Cadastro from './pages/auth/Cadastro';
-
-// Páginas de Usuário
 import VisaoGeral from './pages/dashboard/VisaoGeral';
 import NovoChamado from './pages/dashboard/NovoChamado';
 import ChamadosSolicitados from './pages/dashboard/ChamadosSolicitados';
 import OrdensAndamento from './pages/dashboard/OrdensAndamento';
 import ChamadosConcluidos from './pages/dashboard/ChamadosConcluidos';
-
-// Páginas de Admin
 import FilaChamados from './pages/admin/FilaChamados';
 import HistoricoChamados from './pages/admin/HistoricoChamados';
-
-// Componente wrapper para não repetir código
-const UserRoutesWrapper = () => (
-  <ProtectedRoute>
-    <TicketProvider>
-      <DashboardLayout />
-    </TicketProvider>
-  </ProtectedRoute>
-);
-
-const AdminRoutesWrapper = () => (
-  <AdminRoute>
-    <TicketProvider>
-      <DashboardLayout />
-    </TicketProvider>
-  </AdminRoute>
-);
-
 
 function App() {
   const { isAuthenticated, user, loading } = useAuth();
@@ -68,19 +45,19 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/cadastro" element={<Cadastro />} />
 
-      {/* Rotas de Usuário */}
-      <Route element={<UserRoutesWrapper />}>
-        <Route path="/dashboard" element={<VisaoGeral />} />
-        <Route path="/dashboard/novo-chamado" element={<NovoChamado />} />
-        <Route path="/dashboard/solicitados" element={<ChamadosSolicitados />} />
-        <Route path="/dashboard/andamento" element={<OrdensAndamento />} />
-        <Route path="/dashboard/concluidos" element={<ChamadosConcluidos />} />
+      {/* Rota "molde" para o usuário */}
+      <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+        <Route index element={<VisaoGeral />} />
+        <Route path="novo-chamado" element={<NovoChamado />} />
+        <Route path="solicitados" element={<ChamadosSolicitados />} />
+        <Route path="andamento" element={<OrdensAndamento />} />
+        <Route path="concluidos" element={<ChamadosConcluidos />} />
       </Route>
 
-      {/* Rotas de Admin */}
-      <Route element={<AdminRoutesWrapper />}>
-        <Route path="/admin/fila" element={<FilaChamados />} />
-        <Route path="/admin/historico" element={<HistoricoChamados />} />
+      {/* Rota "molde" para o admin */}
+      <Route path="/admin" element={<AdminRoute><DashboardLayout /></AdminRoute>}>
+          <Route path="fila" element={<FilaChamados />} />
+          <Route path="historico" element={<HistoricoChamados />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" />} />

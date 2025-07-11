@@ -1,18 +1,6 @@
 // src/pages/admin/FilaChamados.jsx
 import React, { useState, useEffect } from 'react';
-import {
-  Typography,
-  Box,
-  CircularProgress,
-  Alert,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Button,
-  Paper
-} from '@mui/material';
+import { Typography, Box, CircularProgress, Alert, Grid, FormControl, InputLabel, Select, MenuItem, Button, Paper } from '@mui/material';
 import api from '../../api';
 import TicketCard from '../../components/tickets/TicketCard';
 import TicketDetailsModal from '../../components/tickets/TicketDetailsModal';
@@ -25,6 +13,7 @@ const FilaChamados = () => {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Função para buscar os dados, agora local deste componente
   const fetchTickets = async () => {
     setLoading(true);
     try {
@@ -38,13 +27,13 @@ const FilaChamados = () => {
     }
   };
 
+  // Busca os dados quando os filtros mudam
   useEffect(() => {
     fetchTickets();
   }, [filters]);
 
   const handleFilterChange = (event) => {
-    const { name, value } = event.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setFilters(prev => ({ ...prev, [name]: event.target.name, value: event.target.value }));
   };
 
   const clearFilters = () => {
@@ -61,8 +50,10 @@ const FilaChamados = () => {
     setSelectedTicket(null);
   };
 
+  // Após uma atualização no modal, simplesmente busca os dados de novo
   const handleTicketUpdate = () => {
-    fetchTickets(); // Recarrega a lista após a atualização no modal
+    handleCloseModal();
+    fetchTickets(); 
   };
 
   return (
@@ -71,12 +62,10 @@ const FilaChamados = () => {
 
       <Grid container spacing={2} mb={3} alignItems="center">
         <Grid item xs={12} sm={4}>
-          {/* A propriedade 'fullWidth' garante que o componente ocupe todo o espaço */}
-          <FormControl fullWidth style={{ width: '100%', minWidth: '90px' }}>
+          <FormControl fullWidth>
             <InputLabel id="setor-filter-label">Setor</InputLabel>
             <Select
               labelId="setor-filter-label"
-              id="setor-select"
               name="department"
               value={filters.department}
               label="Setor"
@@ -91,11 +80,10 @@ const FilaChamados = () => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={4}>
-          <FormControl fullWidth style={{ width: '100%', minWidth: '120px' }}>
+          <FormControl fullWidth>
             <InputLabel id="prioridade-filter-label">Prioridade</InputLabel>
             <Select
               labelId="prioridade-filter-label"
-              id="prioridade-select"
               name="priority"
               value={filters.priority}
               label="Prioridade"
@@ -111,8 +99,8 @@ const FilaChamados = () => {
           <Button variant="outlined" onClick={clearFilters} fullWidth sx={{ height: '56px' }}>Limpar Filtros</Button>
         </Grid>
       </Grid>
-
-      {loading && <Box display="flex" justifyContent="center" sx={{ my: 4 }}><CircularProgress /></Box>}
+      
+      {loading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>}
       {error && <Alert severity="error">{error}</Alert>}
       {!loading && tickets.length === 0 && <Typography sx={{ my: 4, textAlign: 'center' }}>Nenhum chamado encontrado.</Typography>}
 
