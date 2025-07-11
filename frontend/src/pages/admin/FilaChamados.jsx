@@ -53,7 +53,7 @@ const FilaChamados = () => {
   // Após uma atualização no modal, simplesmente busca os dados de novo
   const handleTicketUpdate = () => {
     handleCloseModal();
-    fetchTickets(); 
+    fetchTickets();
   };
 
   return (
@@ -61,7 +61,7 @@ const FilaChamados = () => {
       <Typography variant="h4" gutterBottom>Fila de Chamados</Typography>
 
       <Grid container spacing={2} mb={3} alignItems="center">
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={5}>
           <FormControl fullWidth>
             <InputLabel id="setor-filter-label">Setor</InputLabel>
             <Select
@@ -71,16 +71,20 @@ const FilaChamados = () => {
               label="Setor"
               onChange={handleFilterChange}
             >
-              <MenuItem value=""><em>Todos</em></MenuItem>
-              <MenuItem value="Financeiro">Financeiro</MenuItem>
-              <MenuItem value="RH">Recursos Humanos</MenuItem>
-              <MenuItem value="Marketing">Marketing</MenuItem>
               <MenuItem value="TI">TI</MenuItem>
+              <MenuItem value="RH">RH</MenuItem>
+              <MenuItem value="Recepção">Recepção</MenuItem>
+              <MenuItem value="Almoxarifado">Almoxarifado</MenuItem>
+              <MenuItem value="Sesmt">Sesmt</MenuItem>
+              <MenuItem value="Dose em Casa">Dose em Casa</MenuItem>
+              <MenuItem value="Supervisão">Supervisão</MenuItem>
+              <MenuItem value="Compras/Financeiro">Compras/Financeiro</MenuItem>
+              <MenuItem value="Diretoria">Diretoria</MenuItem>
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
+        <Grid item xs={12} sm={5}>
+          <FormControl fullWidth >
             <InputLabel id="prioridade-filter-label">Prioridade</InputLabel>
             <Select
               labelId="prioridade-filter-label"
@@ -99,7 +103,7 @@ const FilaChamados = () => {
           <Button variant="outlined" onClick={clearFilters} fullWidth sx={{ height: '56px' }}>Limpar Filtros</Button>
         </Grid>
       </Grid>
-      
+
       {loading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>}
       {error && <Alert severity="error">{error}</Alert>}
       {!loading && tickets.length === 0 && <Typography sx={{ my: 4, textAlign: 'center' }}>Nenhum chamado encontrado.</Typography>}
