@@ -57,7 +57,7 @@ const FilaChamados = () => {
   };
 
   return (
-    <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+    <Paper sx={{  p: 3, width: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="h4" gutterBottom>Fila de Chamados</Typography>
 
       <Grid container spacing={2} mb={3} alignItems="center">
