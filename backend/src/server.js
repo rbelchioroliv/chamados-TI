@@ -1,4 +1,4 @@
-
+// backend/src/server.js
 import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
@@ -10,17 +10,14 @@ import { sendRegistrationEmail, sendNewTicketEmailToUser, sendNewTicketEmailToIT
 const app = express();
 const prisma = new PrismaClient();
 
-app.use(cors());
-app.use(express.json());
-
+// --- CONFIGURAÇÃO CORRETA DO CORS ---
 const allowedOrigins = [
   'https://chamados-ti.vercel.app', 
-  'http://localhost:5173'           
+  'http://localhost:5173'
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -29,47 +26,33 @@ const corsOptions = {
   },
 };
 
+// Usamos o CORS configurado e o express.json ANTES de todas as rotas
 app.use(cors(corsOptions));
+app.use(express.json());
+
+
+// --- ROTAS DA APLICAÇÃO ---
 
 app.post('/api/register', async (req, res) => {
   const { name, username, email, department, password } = req.body;
-
   if (!name || !username || !email || !department || !password) {
     return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
   }
-
   try {
     const existingUser = await prisma.user.findFirst({
       where: { OR: [{ email }, { username }] },
     });
-
     if (existingUser) {
       return res.status(409).json({ error: 'Email ou nome de usuário já existe.' });
     }
-
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = await prisma.user.create({
-      data: {
-        name,
-        username,
-        email,
-        department,
-        password: hashedPassword,
-      },
+      data: { name, username, email, department, password: hashedPassword, role: department === 'IT' ? 'IT' : 'USER' },
     });
-
-    // --- A MUDANÇA ESTÁ AQUI ---
-    // Chamamos a função para enviar o e-mail de boas-vindas.
-    // Não usamos 'await' para que o usuário não precise esperar o envio do e-mail para receber a resposta.
     sendRegistrationEmail(newUser);
-    // --- FIM DA MUDANÇA ---
-
     console.log(`Usuário ${username} cadastrado com sucesso!`);
-
     const { password: _, ...userWithoutPassword } = newUser;
     return res.status(201).json(userWithoutPassword);
-
   } catch (error) {
     console.error("Erro ao cadastrar usuário:", error);
     return res.status(500).json({ error: 'Erro interno do servidor.' });
@@ -78,40 +61,21 @@ app.post('/api/register', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
-
   if (!email || !password) {
     return res.status(400).json({ error: 'Email e senha são obrigatórios.' });
   }
-
   try {
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return res.status(404).json({ error: 'Credenciais inválidas.' }); // Usuário não encontrado
+      return res.status(401).json({ error: 'Credenciais inválidas.' });
     }
-
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Credenciais inválidas.' }); // Senha incorreta
+      return res.status(401).json({ error: 'Credenciais inválidas.' });
     }
-
-    // Se o login for válido, gere um token JWT
-    const token = jwt.sign(
-      { userId: user.id, role: user.role }, // Informações que queremos no token
-      process.env.JWT_SECRET, // Nossa chave secreta do .env
-      { expiresIn: '8h' } // Tempo de expiração do token
-    );
-
+    const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '8h' });
     const { password: _, ...userWithoutPassword } = user;
-
-    return res.status(200).json({
-      user: userWithoutPassword,
-      token,
-    });
-
+    return res.status(200).json({ user: userWithoutPassword, token });
   } catch (error) {
     console.error("Erro no login:", error);
     return res.status(500).json({ error: 'Erro interno do servidor.' });
@@ -120,35 +84,18 @@ app.post('/api/login', async (req, res) => {
 
 app.post('/api/tickets', authMiddleware, async (req, res) => {
   const { title, description, priority } = req.body;
-  const { userId } = req.user; // Obtemos o ID do usuário do token JWT, injetado pelo middleware
-
+  const { userId } = req.user;
   if (!title || !description || !priority) {
     return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
   }
-
   try {
     const newTicket = await prisma.ticket.create({
-      data: {
-        title,
-        description,
-        priority, 
-        status: 'REQUESTED',
-        owner: {
-          connect: { id: userId }, 
-        },
-      },
-      include: {
-        owner: { 
-          select: { email: true, name: true, department: true }
-        }
-      }
+      data: { title, description, priority, status: 'REQUESTED', owner: { connect: { id: userId } } },
+      include: { owner: { select: { email: true, name: true, department: true } } }
     });
-
     sendNewTicketEmailToUser(newTicket.owner, newTicket);
     sendNewTicketEmailToIT(newTicket.owner, newTicket);
-
     console.log(`Novo chamado "${title}" criado pelo usuário ${newTicket.owner.name}`);
-
     res.status(201).json(newTicket);
   } catch (error) {
     console.error("Erro ao criar chamado:", error);
@@ -158,17 +105,11 @@ app.post('/api/tickets', authMiddleware, async (req, res) => {
 
 app.get('/api/tickets', authMiddleware, async (req, res) => {
   const { userId } = req.user;
-
   try {
     const tickets = await prisma.ticket.findMany({
-      where: {
-        ownerId: userId, // Filtra os chamados para retornar apenas os do usuário logado
-      },
-      orderBy: {
-        createdAt: 'desc', // Ordena pelos mais recentes primeiro
-      },
+      where: { ownerId: userId },
+      orderBy: { createdAt: 'desc' },
     });
-
     res.status(200).json(tickets);
   } catch (error) {
     console.error("Erro ao buscar chamados:", error);
@@ -177,36 +118,16 @@ app.get('/api/tickets', authMiddleware, async (req, res) => {
 });
 
 app.get('/api/admin/tickets', authMiddleware, adminMiddleware, async (req, res) => {
-  const { department, priority } = req.query; // Pega os filtros da URL
-
-  const whereClause = {}; // Objeto de filtro dinâmico para o Prisma
-
-  if (department) {
-    whereClause.owner = { department: department };
-  }
-  if (priority) {
-    whereClause.priority = priority;
-  }
-
-  // Vamos buscar apenas os chamados que não estão concluídos
-  whereClause.status = {
-    not: 'COMPLETED'
-  };
-
+  const { department, priority } = req.query;
+  const whereClause = { status: { not: 'COMPLETED' } };
+  if (department) { whereClause.owner = { department: department }; }
+  if (priority) { whereClause.priority = priority; }
   try {
     const tickets = await prisma.ticket.findMany({
       where: whereClause,
-      include: {
-        owner: { // Inclui os dados do usuário em cada chamado
-          select: { name: true, department: true }
-        }
-      },
-      orderBy: [ // Ordena por prioridade (urgente primeiro) e depois por data
-        { priority: 'desc' }, // 'URGENT' vem antes de 'NORMAL'
-        { createdAt: 'asc' }
-      ]
+      include: { owner: { select: { name: true, department: true } } },
+      orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }]
     });
-
     res.status(200).json(tickets);
   } catch (error) {
     console.error("Erro ao buscar chamados de admin:", error);
@@ -215,51 +136,29 @@ app.get('/api/admin/tickets', authMiddleware, adminMiddleware, async (req, res) 
 });
 
 app.patch('/api/admin/tickets/:id', authMiddleware, adminMiddleware, async (req, res) => {
-  const { id } = req.params; // Pega o ID do chamado da URL
-  const { status, estimatedCompletion } = req.body; // Pega o novo status do corpo da requisição
-
+  const { id } = req.params;
+  const { status, estimatedCompletion } = req.body;
   if (!status) {
     return res.status(400).json({ error: 'O novo status é obrigatório.' });
   }
-
-  const dataToUpdate = {
-    status: status,
-  };
-
-  // Se o chamado estiver sendo concluído, adiciona a data de conclusão
-  if (status === 'COMPLETED') {
-    dataToUpdate.completedAt = new Date();
-  }
-
-  // Se uma estimativa for fornecida, atualize-a
+  const dataToUpdate = { status: status };
+  if (status === 'COMPLETED') { dataToUpdate.completedAt = new Date(); }
   if (estimatedCompletion) {
-    // Corrige o problema do fuso horário tratando a data como local
-    const parts = estimatedCompletion.split('-'); // Ex: '2025-07-11' vira ['2025', '07', '11']
-    // Cria a data usando os componentes, o que força o JS a usar o fuso horário local
+    const parts = estimatedCompletion.split('-');
     dataToUpdate.estimatedCompletion = new Date(parts[0], parts[1] - 1, parts[2]);
   }
-
   try {
     const updatedTicket = await prisma.ticket.update({
       where: { id: id },
       data: dataToUpdate,
-      include: { 
-        owner: {
-          select: { name: true, department: true }
-        }
-      }
+      include: { owner: { select: { email: true, name: true, department: true } } }
     });
-
     if (updatedTicket.status === 'IN_PROGRESS' || updatedTicket.status === 'COMPLETED') {
       sendStatusUpdateEmail(updatedTicket.owner, updatedTicket);
     }
-
     res.status(200).json(updatedTicket);
-
-   
   } catch (error) {
     console.error("Erro ao atualizar chamado:", error);
-    // Verifica se o erro é porque o chamado não foi encontrado
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Chamado não encontrado.' });
     }
@@ -268,18 +167,13 @@ app.patch('/api/admin/tickets/:id', authMiddleware, adminMiddleware, async (req,
 });
 
 app.get('/api/admin/tickets/history', authMiddleware, adminMiddleware, async (req, res) => {
-  // Filtros de data e paginação
   const { year, month, day, page = 1, limit = 10 } = req.query;
-
   const whereClause = { status: 'COMPLETED' };
   const parsedLimit = parseInt(limit);
   const parsedPage = parseInt(page);
-
-  // Lógica para construir o filtro de data
   if (year) {
     const startDate = new Date(parseInt(year), month ? parseInt(month) - 1 : 0, day ? parseInt(day) : 1);
     let endDate;
-
     if (day) {
       endDate = new Date(startDate);
       endDate.setDate(startDate.getDate() + 1);
@@ -289,27 +183,17 @@ app.get('/api/admin/tickets/history', authMiddleware, adminMiddleware, async (re
     } else {
       endDate = new Date(parseInt(year) + 1, 0, 1);
     }
-
-    whereClause.completedAt = {
-      gte: startDate,
-      lt: endDate,
-    };
+    whereClause.completedAt = { gte: startDate, lt: endDate };
   }
-
   try {
-    // Faz duas chamadas: uma para os dados paginados, outra para o total
     const tickets = await prisma.ticket.findMany({
       where: whereClause,
-      include: {
-        owner: { select: { name: true, department: true } }
-      },
+      include: { owner: { select: { name: true, department: true } } },
       orderBy: { completedAt: 'desc' },
       skip: (parsedPage - 1) * parsedLimit,
       take: parsedLimit,
     });
-
     const totalTickets = await prisma.ticket.count({ where: whereClause });
-
     res.status(200).json({ tickets, total: totalTickets });
   } catch (error) {
     console.error("Erro ao buscar histórico de chamados:", error);
@@ -321,20 +205,11 @@ app.get('/api/it-status', authMiddleware, async (req, res) => {
   try {
     const currentTask = await prisma.ticket.findFirst({
       where: { status: 'IN_PROGRESS' },
-      // MUDANÇA: Agora selecionamos a prioridade E o ID do dono
       select: { priority: true, ownerId: true },
       orderBy: { priority: 'desc' },
     });
-
     if (currentTask) {
-      // Resposta agora contém a prioridade e o ownerId
-      res.json({
-        status: 'OCUPADO',
-        task: {
-          priority: currentTask.priority,
-          ownerId: currentTask.ownerId,
-        },
-      });
+      res.json({ status: 'OCUPADO', task: { priority: currentTask.priority, ownerId: currentTask.ownerId } });
     } else {
       res.json({ status: 'DISPONIVEL' });
     }
@@ -345,36 +220,20 @@ app.get('/api/it-status', authMiddleware, async (req, res) => {
 
 app.get('/api/tickets/my-position', authMiddleware, async (req, res) => {
   const { userId } = req.user;
-
   try {
-    // 1. Encontra o chamado mais antigo do usuário que ainda está na fila
     const userTicket = await prisma.ticket.findFirst({
-      where: {
-        ownerId: userId,
-        status: 'REQUESTED',
-      },
+      where: { ownerId: userId, status: 'REQUESTED' },
       orderBy: { createdAt: 'asc' },
     });
-
     if (!userTicket) {
-      // Se o usuário não tem chamados na fila, retorna nulo
       return res.json({ position: null, ticketTitle: null });
     }
-
-    // 2. Busca todos os chamados que estão na fila, na ordem de prioridade
     const queue = await prisma.ticket.findMany({
       where: { status: 'REQUESTED' },
-      orderBy: [
-        { priority: 'desc' },
-        { createdAt: 'asc' },
-      ],
+      orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
     });
-
-    // 3. Encontra a posição (índice + 1) do chamado do usuário na fila geral
     const position = queue.findIndex(ticket => ticket.id === userTicket.id) + 1;
-
     res.json({ position, ticketTitle: userTicket.title });
-
   } catch (error) {
     res.status(500).json({ error: 'Erro ao calcular a posição na fila.' });
   }
@@ -383,14 +242,7 @@ app.get('/api/tickets/my-position', authMiddleware, async (req, res) => {
 app.get('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
-      select: { // Selecionamos apenas os campos necessários, sem a senha
-        id: true,
-        name: true,
-        username: true,
-        email: true,
-        department: true,
-        role: true,
-      },
+      select: { id: true, name: true, username: true, email: true, department: true, role: true },
       orderBy: { name: 'asc' },
     });
     res.status(200).json(users);
@@ -400,23 +252,12 @@ app.get('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) =>
   }
 });
 
-// Rota para o admin deletar um usuário
 app.delete('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res) => {
   const { id } = req.params;
-
   try {
-    // IMPORTANTE: Para deletar um usuário, precisamos primeiro deletar seus chamados
-    // para não quebrar a relação no banco de dados.
-    await prisma.ticket.deleteMany({
-      where: { ownerId: id },
-    });
-
-    // Agora podemos deletar o usuário
-    await prisma.user.delete({
-      where: { id: id },
-    });
-
-    res.status(204).send(); // 204 No Content indica sucesso sem corpo de resposta
+    await prisma.ticket.deleteMany({ where: { ownerId: id } });
+    await prisma.user.delete({ where: { id: id } });
+    res.status(204).send();
   } catch (error) {
     console.error(`Erro ao deletar usuário ${id}:`, error);
     res.status(500).json({ error: 'Erro interno ao deletar o usuário.' });
