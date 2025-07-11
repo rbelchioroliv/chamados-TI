@@ -13,7 +13,6 @@ const FilaChamados = () => {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Função para buscar os dados, agora local deste componente
   const fetchTickets = async () => {
     setLoading(true);
     try {
@@ -27,14 +26,19 @@ const FilaChamados = () => {
     }
   };
 
-  // Busca os dados quando os filtros mudam
   useEffect(() => {
     fetchTickets();
   }, [filters]);
 
+  // --- A CORREÇÃO ESTÁ AQUI ---
   const handleFilterChange = (event) => {
-    setFilters(prev => ({ ...prev, [name]: event.target.name, value: event.target.value }));
+    const { name, value } = event.target;
+    setFilters(prev => ({
+      ...prev,
+      [name]: value,
+    }));
   };
+  // --- FIM DA CORREÇÃO ---
 
   const clearFilters = () => {
     setFilters({ department: '', priority: '' });
@@ -50,15 +54,15 @@ const FilaChamados = () => {
     setSelectedTicket(null);
   };
 
-  // Após uma atualização no modal, simplesmente busca os dados de novo
   const handleTicketUpdate = () => {
-    handleCloseModal();
     fetchTickets();
   };
 
   return (
-    <Paper sx={{  p: 3, width: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Typography variant="h4" gutterBottom>Fila de Chamados</Typography>
+    <Paper sx={{ p: 3, width: '100%' }}>
+      <Typography variant="h4" gutterBottom>
+        Fila de Chamados
+      </Typography>
 
       <Grid container spacing={2} mb={3} alignItems="center">
         <Grid item xs={12} sm={5}>
@@ -66,11 +70,13 @@ const FilaChamados = () => {
             <InputLabel id="setor-filter-label">Setor</InputLabel>
             <Select
               labelId="setor-filter-label"
+              id="setor-select"
               name="department"
               value={filters.department}
               label="Setor"
               onChange={handleFilterChange}
             >
+              <MenuItem value=""><em>Todos</em></MenuItem>
               <MenuItem value="TI">TI</MenuItem>
               <MenuItem value="RH">RH</MenuItem>
               <MenuItem value="Recepção">Recepção</MenuItem>
@@ -84,10 +90,11 @@ const FilaChamados = () => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={5}>
-          <FormControl fullWidth >
+          <FormControl fullWidth>
             <InputLabel id="prioridade-filter-label">Prioridade</InputLabel>
             <Select
               labelId="prioridade-filter-label"
+              id="prioridade-select"
               name="priority"
               value={filters.priority}
               label="Prioridade"
@@ -99,11 +106,13 @@ const FilaChamados = () => {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <Button variant="outlined" onClick={clearFilters} fullWidth sx={{ height: '56px' }}>Limpar Filtros</Button>
+        <Grid item xs={12} sm={2}>
+          <Button variant="outlined" onClick={clearFilters} fullWidth sx={{ height: '56px' }}>
+            Limpar
+          </Button>
         </Grid>
       </Grid>
-
+      
       {loading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>}
       {error && <Alert severity="error">{error}</Alert>}
       {!loading && tickets.length === 0 && <Typography sx={{ my: 4, textAlign: 'center' }}>Nenhum chamado encontrado.</Typography>}
