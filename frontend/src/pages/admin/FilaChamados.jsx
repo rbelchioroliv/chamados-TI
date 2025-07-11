@@ -66,7 +66,7 @@ const FilaChamados = () => {
 
       <Grid container spacing={2} mb={3} alignItems="center">
         <Grid item xs={12} sm={5}>
-          <FormControl fullWidth>
+          <FormControl fullWidth sx={{ minWidth: 220 }}>
             <InputLabel id="setor-filter-label">Setor</InputLabel>
             <Select
               labelId="setor-filter-label"
@@ -90,7 +90,7 @@ const FilaChamados = () => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={5}>
-          <FormControl fullWidth>
+          <FormControl fullWidth sx={{ minWidth: 220 }}>
             <InputLabel id="prioridade-filter-label">Prioridade</InputLabel>
             <Select
               labelId="prioridade-filter-label"
