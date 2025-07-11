@@ -3,12 +3,32 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../../api';
-import { Container, Box, Typography, TextField, Button, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+
+// Imports adicionais do Material-UI para o ícone no campo de senha
+import { 
+  Container, 
+  Box, 
+  Typography, 
+  TextField, 
+  Button, 
+  Alert, 
+  FormControl, 
+  InputLabel, 
+  Select, 
+  MenuItem,
+  IconButton,
+  InputAdornment 
+} from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 const Cadastro = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // Estado para controlar a visibilidade da senha
+
+  const handleClickShowPassword = () => setShowPassword((show) => !show);
+  const handleMouseDownPassword = (event) => event.preventDefault();
 
   const onSubmit = async (data) => {
     setServerError('');
@@ -27,11 +47,13 @@ const Cadastro = () => {
       <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Typography component="h1" variant="h5">Cadastro</Typography>
         <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 3 }}>
-          {serverError && <Alert severity="error" sx={{ mb: 2 }}>{serverError}</Alert>}
+          {serverError && <Alert severity="error" sx={{ mb: 2, width: '100%' }}>{serverError}</Alert>}
+          
           <TextField
             label="Nome Completo"
             fullWidth
             margin="normal"
+            autoFocus
             {...register('name', { required: 'O nome é obrigatório' })}
             error={!!errors.name}
             helperText={errors.name?.message}
@@ -53,6 +75,8 @@ const Cadastro = () => {
             error={!!errors.email}
             helperText={errors.email?.message}
           />
+
+          {/* LISTA DE DEPARTAMENTOS ATUALIZADA */}
           <FormControl fullWidth margin="normal">
             <InputLabel>Departamento</InputLabel>
             <Select
@@ -61,21 +85,43 @@ const Cadastro = () => {
               {...register('department', { required: 'O departamento é obrigatório' })}
               error={!!errors.department}
             >
-              <MenuItem value="Financeiro">Financeiro</MenuItem>
-              <MenuItem value="RH">Recursos Humanos</MenuItem>
-              <MenuItem value="Marketing">Marketing</MenuItem>
-              <MenuItem value="IT">TI</MenuItem> {/* <-- A CORREÇÃO ESTÁ AQUI */}
+              <MenuItem value="TI">TI</MenuItem>
+              <MenuItem value="RH">RH</MenuItem>
+              <MenuItem value="Recepção">Recepção</MenuItem>
+              <MenuItem value="Almoxarifado">Almoxarifado</MenuItem>
+              <MenuItem value="Sesmt">Sesmt</MenuItem>
+              <MenuItem value="Dose em Casa">Dose em Casa</MenuItem>
+              <MenuItem value="Supervisão">Supervisão</MenuItem>
+              <MenuItem value="Compras/Financeiro">Compras/Financeiro</MenuItem>
+              <MenuItem value="Diretoria">Diretoria</MenuItem>
             </Select>
           </FormControl>
-          <TextField
-            label="Senha"
-            type="password"
-            fullWidth
-            margin="normal"
-            {...register('password', { required: 'A senha é obrigatória', minLength: { value: 6, message: 'A senha deve ter no mínimo 6 caracteres' } })}
-            error={!!errors.password}
-            helperText={errors.password?.message}
-          />
+          
+          {/* CAMPO DE SENHA COM BOTÃO PARA REVELAR */}
+          <FormControl fullWidth margin="normal" variant="outlined">
+            <InputLabel htmlFor="password-input">Senha</InputLabel>
+            <OutlinedInput
+              id="password-input"
+              type={showPassword ? 'text' : 'password'}
+              {...register('password', { required: 'A senha é obrigatória', minLength: { value: 6, message: 'A senha deve ter no mínimo 6 caracteres' } })}
+              error={!!errors.password}
+              endAdornment={
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={handleClickShowPassword}
+                    onMouseDown={handleMouseDownPassword}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              }
+              label="Senha"
+            />
+             {errors.password && <FormHelperText error>{errors.password.message}</FormHelperText>}
+          </FormControl>
+
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
             Cadastrar
           </Button>
