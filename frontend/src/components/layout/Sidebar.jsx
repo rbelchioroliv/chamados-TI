@@ -3,6 +3,7 @@ import React from 'react';
 import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Divider, IconButton, useTheme, Box } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import GroupIcon from '@mui/icons-material/Group';
 
 // Ícones
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
@@ -24,8 +25,9 @@ const userMenuItems = [
 
 // Itens de menu para o TI
 const adminMenuItems = [
-    { text: 'Fila de Chamados', icon: <PendingActionsIcon />, path: '/admin/fila' },
-    { text: 'Histórico', icon: <AssessmentIcon />, path: '/admin/historico' },
+  { text: 'Fila de Chamados', icon: <PendingActionsIcon />, path: '/admin/fila' },
+  { text: 'Histórico', icon: <AssessmentIcon />, path: '/admin/historico' },
+  { text: 'Gerenciar Usuários', icon: <GroupIcon />, path: '/admin/users' },
 ];
 
 // --- COMPONENTE PRINCIPAL ---
@@ -76,7 +78,7 @@ const Sidebar = ({ drawerWidth, collapsedDrawerWidth, isSidebarExpanded, mobileO
         <Divider />
         <Toolbar sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <IconButton onClick={handleSidebarToggle}>
-            <ChevronLeftIcon sx={{ transform: isSidebarExpanded ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s' }}/>
+            <ChevronLeftIcon sx={{ transform: isSidebarExpanded ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s' }} />
           </IconButton>
         </Toolbar>
       </Box>

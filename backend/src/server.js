@@ -380,6 +380,49 @@ app.get('/api/tickets/my-position', authMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: { // Selecionamos apenas os campos necessários, sem a senha
+        id: true,
+        name: true,
+        username: true,
+        email: true,
+        department: true,
+        role: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Erro ao listar usuários:", error);
+    res.status(500).json({ error: 'Erro interno ao listar usuários.' });
+  }
+});
+
+// Rota para o admin deletar um usuário
+app.delete('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // IMPORTANTE: Para deletar um usuário, precisamos primeiro deletar seus chamados
+    // para não quebrar a relação no banco de dados.
+    await prisma.ticket.deleteMany({
+      where: { ownerId: id },
+    });
+
+    // Agora podemos deletar o usuário
+    await prisma.user.delete({
+      where: { id: id },
+    });
+
+    res.status(204).send(); // 204 No Content indica sucesso sem corpo de resposta
+  } catch (error) {
+    console.error(`Erro ao deletar usuário ${id}:`, error);
+    res.status(500).json({ error: 'Erro interno ao deletar o usuário.' });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);

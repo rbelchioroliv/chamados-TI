@@ -19,6 +19,7 @@ import OrdensAndamento from './pages/dashboard/OrdensAndamento';
 import ChamadosConcluidos from './pages/dashboard/ChamadosConcluidos';
 import FilaChamados from './pages/admin/FilaChamados';
 import HistoricoChamados from './pages/admin/HistoricoChamados';
+import UserManagement from './pages/admin/UserManagement';
 
 function App() {
   const { isAuthenticated, user, loading } = useAuth();
@@ -58,6 +59,7 @@ function App() {
       <Route path="/admin" element={<AdminRoute><DashboardLayout /></AdminRoute>}>
           <Route path="fila" element={<FilaChamados />} />
           <Route path="historico" element={<HistoricoChamados />} />
+          <Route path="/admin/users" element={<UserManagement />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" />} />
