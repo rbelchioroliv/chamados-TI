@@ -1,20 +1,30 @@
 // src/pages/dashboard/ChamadosSolicitados.jsx
-import React, { useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Typography, Box, CircularProgress, Alert } from '@mui/material';
-import { useTickets } from '../../context/TicketContext';
+import api from '../../api';
 import TicketCard from '../../components/tickets/TicketCard';
 
 const ChamadosSolicitados = () => {
-  const { tickets, loading, error, fetchTickets } = useTickets();
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    const fetchTickets = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get('/tickets');
+        // Filtramos aqui mesmo para pegar apenas os solicitados
+        const requestedTickets = response.data.filter(t => t.status === 'REQUESTED');
+        setTickets(requestedTickets);
+      } catch (err) {
+        setError('Falha ao carregar os chamados.');
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchTickets();
-  }, [fetchTickets]);
-
-  const requestedTickets = useMemo(() => 
-    tickets.filter(ticket => ticket.status === 'REQUESTED'),
-    [tickets]
-  );
+  }, []);
 
   if (loading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>;
@@ -27,10 +37,10 @@ const ChamadosSolicitados = () => {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>Meus Chamados Solicitados</Typography>
-      {requestedTickets.length === 0 ? (
+      {tickets.length === 0 ? (
         <Typography>Nenhum chamado solicitado encontrado.</Typography>
       ) : (
-        requestedTickets.map(ticket => (
+        tickets.map(ticket => (
           <TicketCard key={ticket.id} ticket={ticket} />
         ))
       )}
