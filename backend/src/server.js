@@ -4,13 +4,15 @@ import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { authMiddleware, adminMiddleware } from './middleware/auth.js'; // <-- ATUALIZE A IMPORTAÇÃO
+import { authMiddleware, adminMiddleware } from './middleware/auth.js';
+import { sendRegistrationEmail, sendNewTicketEmailToUser, sendNewTicketEmailToIT, sendStatusUpdateEmail } from './services/emailService.js';
 
 const app = express();
 const prisma = new PrismaClient();
 
 app.use(cors());
 app.use(express.json());
+
 
 
 app.post('/api/register', async (req, res) => {
@@ -29,7 +31,6 @@ app.post('/api/register', async (req, res) => {
       return res.status(409).json({ error: 'Email ou nome de usuário já existe.' });
     }
 
-    // Criptografa a senha antes de salvar
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await prisma.user.create({
@@ -42,12 +43,14 @@ app.post('/api/register', async (req, res) => {
       },
     });
 
-    // IMPORTANTE: Aqui é onde você adicionaria a lógica para enviar o e-mail de confirmação
-    // com o Nodemailer. Por simplicidade, vamos pular essa parte no código inicial.
+    // --- A MUDANÇA ESTÁ AQUI ---
+    // Chamamos a função para enviar o e-mail de boas-vindas.
+    // Não usamos 'await' para que o usuário não precise esperar o envio do e-mail para receber a resposta.
+    sendRegistrationEmail(newUser);
+    // --- FIM DA MUDANÇA ---
 
     console.log(`Usuário ${username} cadastrado com sucesso!`);
 
-    // Não retornamos a senha no response
     const { password: _, ...userWithoutPassword } = newUser;
     return res.status(201).json(userWithoutPassword);
 
@@ -112,22 +115,22 @@ app.post('/api/tickets', authMiddleware, async (req, res) => {
       data: {
         title,
         description,
-        priority, // Deve ser 'URGENT' ou 'NORMAL'
+        priority, 
         status: 'REQUESTED',
         owner: {
-          connect: { id: userId }, // Associa o chamado ao usuário logado
+          connect: { id: userId }, 
         },
       },
       include: {
-        owner: { // Inclui os dados do usuário para o e-mail
-          select: { email: true, name: true }
+        owner: { 
+          select: { email: true, name: true, department: true }
         }
       }
     });
 
-    // LÓGICA DE ENVIO DE EMAIL (opcional para o funcionamento inicial)
-    // No futuro, aqui você chamaria uma função para enviar o e-mail de confirmação.
-    // Ex: await sendTicketConfirmationEmail(newTicket.owner, newTicket);
+    sendNewTicketEmailToUser(newTicket.owner, newTicket);
+    sendNewTicketEmailToIT(newTicket.owner, newTicket);
+
     console.log(`Novo chamado "${title}" criado pelo usuário ${newTicket.owner.name}`);
 
     res.status(201).json(newTicket);
@@ -224,17 +227,20 @@ app.patch('/api/admin/tickets/:id', authMiddleware, adminMiddleware, async (req,
     const updatedTicket = await prisma.ticket.update({
       where: { id: id },
       data: dataToUpdate,
-      include: { // <-- A LINHA MÁGICA ESTÁ AQUI
+      include: { 
         owner: {
           select: { name: true, department: true }
         }
       }
     });
 
-    // Futuramente, aqui você pode enviar um e-mail para o usuário
-    // notificando sobre a mudança de status do seu chamado.
+    if (updatedTicket.status === 'IN_PROGRESS' || updatedTicket.status === 'COMPLETED') {
+      sendStatusUpdateEmail(updatedTicket.owner, updatedTicket);
+    }
 
     res.status(200).json(updatedTicket);
+
+   
   } catch (error) {
     console.error("Erro ao atualizar chamado:", error);
     // Verifica se o erro é porque o chamado não foi encontrado
