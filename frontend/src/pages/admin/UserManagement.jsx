@@ -46,7 +46,7 @@ const UserManagement = () => {
       try {
         await api.delete(`/admin/users/${userId}`);
         alert('Usuário deletado com sucesso.');
-        fetchUsers(); // Recarrega a lista de usuários
+        fetchUsers();
       } catch (err) {
         alert('Falha ao deletar o usuário.');
         console.error(err);
