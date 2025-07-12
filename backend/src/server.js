@@ -1,15 +1,19 @@
-
+// backend/src/server.js
 import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import http from 'http'; // Importa o módulo http nativo do Node.js
+import { Server } from 'socket.io'; // Importa o Server do Socket.IO
+
 import { authMiddleware, adminMiddleware } from './middleware/auth.js';
 import { sendRegistrationEmail, sendNewTicketEmailToUser, sendNewTicketEmailToIT, sendStatusUpdateEmail } from './services/emailService.js';
 
 const app = express();
 const prisma = new PrismaClient();
 
+const server = http.createServer(app);
 
 const allowedOrigins = [
   'https://chamados-ti.vercel.app', 
@@ -26,12 +30,22 @@ const corsOptions = {
   },
 };
 
+const io = new Server(server, {
+  cors: corsOptions
+});
+
+io.on('connection', (socket) => {
+  console.log('✅ Um usuário se conectou via WebSocket:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('❌ Um usuário se desconectou:', socket.id);
+  });
+});
 
 app.use(cors(corsOptions));
 app.use(express.json());
 
 
-// --- ROTAS ---
+// --- ROTAS DA APLICAÇÃO ---
 
 app.post('/api/register', async (req, res) => {
   const { name, username, email, department, password } = req.body;
@@ -49,7 +63,10 @@ app.post('/api/register', async (req, res) => {
     const newUser = await prisma.user.create({
       data: { name, username, email, department, password: hashedPassword, role: department === 'IT' ? 'IT' : 'USER' },
     });
+    
     sendRegistrationEmail(newUser);
+    io.emit('users_updated'); // Avisa que a lista de usuários mudou
+    
     console.log(`Usuário ${username} cadastrado com sucesso!`);
     const { password: _, ...userWithoutPassword } = newUser;
     return res.status(201).json(userWithoutPassword);
@@ -95,6 +112,7 @@ app.post('/api/tickets', authMiddleware, async (req, res) => {
     });
     sendNewTicketEmailToUser(newTicket.owner, newTicket);
     sendNewTicketEmailToIT(newTicket.owner, newTicket);
+    io.emit('tickets_updated'); // Avisa que a lista de chamados mudou
     console.log(`Novo chamado "${title}" criado pelo usuário ${newTicket.owner.name}`);
     res.status(201).json(newTicket);
   } catch (error) {
@@ -156,6 +174,7 @@ app.patch('/api/admin/tickets/:id', authMiddleware, adminMiddleware, async (req,
     if (updatedTicket.status === 'IN_PROGRESS' || updatedTicket.status === 'COMPLETED') {
       sendStatusUpdateEmail(updatedTicket.owner, updatedTicket);
     }
+    io.emit('tickets_updated'); // Avisa que a lista de chamados mudou
     res.status(200).json(updatedTicket);
   } catch (error) {
     console.error("Erro ao atualizar chamado:", error);
@@ -257,6 +276,7 @@ app.delete('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, 
   try {
     await prisma.ticket.deleteMany({ where: { ownerId: id } });
     await prisma.user.delete({ where: { id: id } });
+    io.emit('users_updated'); // Avisa que a lista de usuários mudou
     res.status(204).send();
   } catch (error) {
     console.error(`Erro ao deletar usuário ${id}:`, error);
@@ -267,33 +287,23 @@ app.delete('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, 
 app.patch('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res) => {
   const { id } = req.params;
   const { role, password } = req.body;
-
   const dataToUpdate = {};
-
-  // Adiciona o novo papel ao objeto de atualização, se ele foi fornecido
-  if (role) {
-    dataToUpdate.role = role;
-  }
-
-  // Se uma nova senha foi fornecida, criptografa e adiciona ao objeto
+  if (role) { dataToUpdate.role = role; }
   if (password) {
     if (password.length < 6) {
       return res.status(400).json({ error: 'A nova senha deve ter no mínimo 6 caracteres.' });
     }
     dataToUpdate.password = await bcrypt.hash(password, 10);
   }
-
-  // Verifica se há algo para atualizar
   if (Object.keys(dataToUpdate).length === 0) {
     return res.status(400).json({ error: 'Nenhum dado para atualizar foi fornecido.' });
   }
-
   try {
     const updatedUser = await prisma.user.update({
       where: { id: id },
       data: dataToUpdate,
     });
-
+    io.emit('users_updated'); // Avisa que a lista de usuários mudou
     const { password: _, ...userWithoutPassword } = updatedUser;
     res.status(200).json(userWithoutPassword);
   } catch (error) {
@@ -304,36 +314,22 @@ app.patch('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, r
 
 app.post('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) => {
   const { name, username, email, department, password, role } = req.body;
-
   if (!name || !username || !email || !department || !password || !role) {
     return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
   }
-
   try {
     const existingUser = await prisma.user.findFirst({
       where: { OR: [{ email }, { username }] },
     });
-
     if (existingUser) {
       return res.status(409).json({ error: 'Email ou nome de usuário já existe.' });
     }
-
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = await prisma.user.create({
-      data: {
-        name,
-        username,
-        email,
-        department,
-        password: hashedPassword,
-        role, // O admin define o papel diretamente
-      },
+      data: { name, username, email, department, password: hashedPassword, role },
     });
-
-    // Opcional: Enviar um e-mail de boas-vindas para o novo usuário
     sendRegistrationEmail(newUser);
-
+    io.emit('users_updated'); // Avisa que a lista de usuários mudou
     const { password: _, ...userWithoutPassword } = newUser;
     res.status(201).json(userWithoutPassword);
   } catch (error) {
@@ -343,6 +339,6 @@ app.post('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) =
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
