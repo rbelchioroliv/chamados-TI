@@ -1,4 +1,4 @@
-// backend/src/server.js
+
 import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
@@ -10,7 +10,7 @@ import { sendRegistrationEmail, sendNewTicketEmailToUser, sendNewTicketEmailToIT
 const app = express();
 const prisma = new PrismaClient();
 
-// --- CONFIGURAÇÃO CORRETA DO CORS ---
+
 const allowedOrigins = [
   'https://chamados-ti.vercel.app', 
   'http://localhost:5173'
@@ -26,12 +26,12 @@ const corsOptions = {
   },
 };
 
-// Usamos o CORS configurado e o express.json ANTES de todas as rotas
+
 app.use(cors(corsOptions));
 app.use(express.json());
 
 
-// --- ROTAS DA APLICAÇÃO ---
+// --- ROTAS ---
 
 app.post('/api/register', async (req, res) => {
   const { name, username, email, department, password } = req.body;
@@ -261,6 +261,44 @@ app.delete('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, 
   } catch (error) {
     console.error(`Erro ao deletar usuário ${id}:`, error);
     res.status(500).json({ error: 'Erro interno ao deletar o usuário.' });
+  }
+});
+
+app.patch('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { role, password } = req.body;
+
+  const dataToUpdate = {};
+
+  // Adiciona o novo papel ao objeto de atualização, se ele foi fornecido
+  if (role) {
+    dataToUpdate.role = role;
+  }
+
+  // Se uma nova senha foi fornecida, criptografa e adiciona ao objeto
+  if (password) {
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'A nova senha deve ter no mínimo 6 caracteres.' });
+    }
+    dataToUpdate.password = await bcrypt.hash(password, 10);
+  }
+
+  // Verifica se há algo para atualizar
+  if (Object.keys(dataToUpdate).length === 0) {
+    return res.status(400).json({ error: 'Nenhum dado para atualizar foi fornecido.' });
+  }
+
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { id: id },
+      data: dataToUpdate,
+    });
+
+    const { password: _, ...userWithoutPassword } = updatedUser;
+    res.status(200).json(userWithoutPassword);
+  } catch (error) {
+    console.error(`Erro ao editar usuário ${id}:`, error);
+    res.status(500).json({ error: 'Erro interno ao editar o usuário.' });
   }
 });
 
