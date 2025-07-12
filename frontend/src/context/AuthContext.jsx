@@ -7,23 +7,19 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // <-- NOSSO NOVO ESTADO DE CARREGAMENTO
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Esta função agora é responsável por verificar a sessão ao iniciar
     const loadUserFromStorage = () => {
       const storedToken = localStorage.getItem('authToken');
       const storedUser = localStorage.getItem('user');
-
       if (storedToken && storedUser) {
         setUser(JSON.parse(storedUser));
         api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
       }
-      // Independentemente de encontrar ou não, o carregamento inicial termina aqui
       setLoading(false);
     };
-
     loadUserFromStorage();
   }, []);
 
@@ -51,11 +47,16 @@ export const AuthProvider = ({ children }) => {
     navigate('/login');
   };
 
+  const updateUser = (newUserData) => {
+    setUser(newUserData);
+    localStorage.setItem('user', JSON.stringify(newUserData));
+    console.log("Dados do usuário atualizados no contexto e localStorage.");
+  };
+
   const isAuthenticated = !!user;
 
-  // Agora também passamos o 'loading' para os componentes filhos
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, loading, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

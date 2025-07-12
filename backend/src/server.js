@@ -47,6 +47,89 @@ app.use(express.json());
 
 // --- ROTAS DA APLICAÇÃO ---
 
+app.patch('/api/users/password', authMiddleware, async (req, res) => {
+  const { userId } = req.user;
+  const { currentPassword, newPassword, newPasswordConfirmation } = req.body;
+
+  // 1. Validação dos campos
+  if (!currentPassword || !newPassword || !newPasswordConfirmation) {
+    return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
+  }
+  if (newPassword !== newPasswordConfirmation) {
+    return res.status(400).json({ error: 'A nova senha e a confirmação não correspondem.' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'A nova senha deve ter no mínimo 6 caracteres.' });
+  }
+
+  try {
+    // 2. Busca o usuário no banco
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
+    // 3. Verifica se a senha atual está correta
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'A senha atual está incorreta.' });
+    }
+
+    // 4. Criptografa e atualiza a nova senha
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword },
+    });
+
+    res.status(200).json({ message: 'Senha atualizada com sucesso!' });
+  } catch (error) {
+    console.error("Erro ao redefinir senha:", error);
+    return res.status(500).json({ error: 'Erro interno ao redefinir a senha.' });
+  }
+});
+
+app.patch('/api/users/profile', authMiddleware, async (req, res) => {
+  const { userId } = req.user;
+  const { name, username, email } = req.body;
+
+  // Verifica se pelo menos um campo obrigatório foi enviado
+  if (!name && !username && !email) {
+    return res.status(400).json({ error: 'Pelo menos um campo (nome, username, email) deve ser fornecido.' });
+  }
+
+  const dataToUpdate = {};
+  if (name) dataToUpdate.name = name;
+  if (username) dataToUpdate.username = username;
+  if (email) dataToUpdate.email = email;
+  
+  try {
+    // Se o email ou username estão sendo alterados, verifica se já não estão em uso por OUTRO usuário
+    if (username || email) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [{ email }, { username }],
+          NOT: { id: userId }, // Exclui o próprio usuário da busca
+        },
+      });
+      if (existingUser) {
+        return res.status(409).json({ error: 'Email ou nome de usuário já está em uso por outra conta.' });
+      }
+    }
+    
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: dataToUpdate,
+    });
+
+    const { password: _, ...userWithoutPassword } = updatedUser;
+    res.status(200).json(userWithoutPassword);
+  } catch (error) {
+    console.error("Erro ao atualizar perfil:", error);
+    return res.status(500).json({ error: 'Erro interno ao atualizar o perfil.' });
+  }
+});
+
 app.post('/api/register', async (req, res) => {
   const { name, username, email, department, password } = req.body;
   if (!name || !username || !email || !department || !password) {
