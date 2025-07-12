@@ -13,19 +13,25 @@ import {
   CircularProgress,
   Alert,
   IconButton,
-  Tooltip
+  Tooltip,
+  Button // Importa o Button
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit'; // Importa o ícone de edição
+import EditIcon from '@mui/icons-material/Edit';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'; // Importa ícone de adicionar
 import api from '../../api';
-import EditUserModal from '../../components/admin/EditUserModal'; // Importa o novo modal
+import EditUserModal from '../../components/admin/EditUserModal';
+import CreateUserModal from '../../components/admin/CreateUserModal'; // Importa o novo modal de criação
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [editingUser, setEditingUser] = useState(null); // Estado para guardar o usuário em edição
-  const [isModalOpen, setIsModalOpen] = useState(false); // Estado para controlar o modal
+  
+  // Estados para os modais
+  const [editingUser, setEditingUser] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -44,19 +50,27 @@ const UserManagement = () => {
     fetchUsers();
   }, []);
 
+  // Funções para o modal de EDIÇÃO
   const handleOpenEditModal = (user) => {
     setEditingUser(user);
-    setIsModalOpen(true);
+    setIsEditModalOpen(true);
   };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
     setEditingUser(null);
   };
 
-  const handleUserUpdate = () => {
-    fetchUsers(); // Recarrega a lista após uma atualização
-    handleCloseModal();
+  // Funções para o modal de CRIAÇÃO
+  const handleOpenCreateModal = () => {
+    setIsCreateModalOpen(true);
+  };
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+  };
+
+  // Função genérica para recarregar a lista
+  const handleUpdate = () => {
+    fetchUsers();
   };
 
   const handleDeleteUser = async (userId, userName) => {
@@ -72,23 +86,27 @@ const UserManagement = () => {
     }
   };
 
-  if (loading) { /* ... (código de loading e erro continua igual) ... */ }
+  if (loading) { /* ... */ }
   if (error) { /* ... */ }
 
   return (
     <Paper sx={{ p: 3, width: '100%' }}>
-      <Typography variant="h4" gutterBottom>Gerenciamento de Usuários</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4" gutterBottom>
+          Gerenciamento de Usuários
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddCircleOutlineIcon />}
+          onClick={handleOpenCreateModal}
+        >
+          Criar Novo Usuário
+        </Button>
+      </Box>
+
       <TableContainer>
         <Table stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell>Nome</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Departamento</TableCell>
-              <TableCell>Papel</TableCell>
-              <TableCell align="right">Ações</TableCell>
-            </TableRow>
-          </TableHead>
+          {/* ... (código da tabela continua o mesmo) ... */}
           <TableBody>
             {users.map((user) => (
               <TableRow key={user.id} hover>
@@ -97,13 +115,11 @@ const UserManagement = () => {
                 <TableCell>{user.department}</TableCell>
                 <TableCell>{user.role}</TableCell>
                 <TableCell align="right">
-                  {/* Botão de Edição */}
                   <Tooltip title="Editar Usuário">
                     <IconButton onClick={() => handleOpenEditModal(user)} color="primary">
                       <EditIcon />
                     </IconButton>
                   </Tooltip>
-                  {/* Botão de Deletar */}
                   <Tooltip title="Deletar Usuário">
                     <IconButton onClick={() => handleDeleteUser(user.id, user.name)} color="error">
                       <DeleteIcon />
@@ -116,12 +132,17 @@ const UserManagement = () => {
         </Table>
       </TableContainer>
 
-      {/* Renderiza o Modal de Edição */}
+      {/* Renderiza os Modais */}
       <EditUserModal
         user={editingUser}
-        open={isModalOpen}
-        onClose={handleCloseModal}
-        onUpdate={handleUserUpdate}
+        open={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        onUpdate={handleUpdate}
+      />
+      <CreateUserModal
+        open={isCreateModalOpen}
+        onClose={handleCloseCreateModal}
+        onUpdate={handleUpdate}
       />
     </Paper>
   );

@@ -302,6 +302,46 @@ app.patch('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, r
   }
 });
 
+app.post('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) => {
+  const { name, username, email, department, password, role } = req.body;
+
+  if (!name || !username || !email || !department || !password || !role) {
+    return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
+  }
+
+  try {
+    const existingUser = await prisma.user.findFirst({
+      where: { OR: [{ email }, { username }] },
+    });
+
+    if (existingUser) {
+      return res.status(409).json({ error: 'Email ou nome de usuário já existe.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        username,
+        email,
+        department,
+        password: hashedPassword,
+        role, // O admin define o papel diretamente
+      },
+    });
+
+    // Opcional: Enviar um e-mail de boas-vindas para o novo usuário
+    sendRegistrationEmail(newUser);
+
+    const { password: _, ...userWithoutPassword } = newUser;
+    res.status(201).json(userWithoutPassword);
+  } catch (error) {
+    console.error("Erro ao criar usuário pelo admin:", error);
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
