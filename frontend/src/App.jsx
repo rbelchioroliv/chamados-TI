@@ -1,4 +1,3 @@
-// src/App.jsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
@@ -46,7 +45,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/cadastro" element={<Cadastro />} />
 
-      {/* Rota "molde" para o usuário */}
+      {/* Rota usuário */}
       <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<VisaoGeral />} />
         <Route path="novo-chamado" element={<NovoChamado />} />
@@ -55,7 +54,7 @@ function App() {
         <Route path="concluidos" element={<ChamadosConcluidos />} />
       </Route>
 
-      {/* Rota "molde" para o admin */}
+      {/* Rota admin */}
       <Route path="/admin" element={<AdminRoute><DashboardLayout /></AdminRoute>}>
           <Route path="fila" element={<FilaChamados />} />
           <Route path="historico" element={<HistoricoChamados />} />

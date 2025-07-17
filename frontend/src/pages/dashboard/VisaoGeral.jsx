@@ -1,4 +1,3 @@
-// src/pages/dashboard/VisaoGeral.jsx
 import React, { useState, useEffect } from 'react';
 import { Typography, Paper, Box, Alert, CircularProgress } from '@mui/material';
 import api from '../../api';
@@ -45,15 +44,15 @@ const VisaoGeral = () => {
         Bem-vindo, {user?.name.split(' ')[0]}!
       </Typography>
       
-      {/* Card de Status do TI (COM A LÓGICA ATUALIZADA) */}
+      {/* Card de Status do TI*/}
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" mb={2}>Status da Equipe de TI</Typography>
         {itStatus?.status === 'DISPONIVEL' ? (
           <Alert severity="success">A equipe de TI está disponível para novos chamados.</Alert>
         ) : (
-          // AQUI COMEÇA A NOVA LÓGICA CONDICIONAL
+       
           itStatus.task?.ownerId === user.id ? (
-            // Mensagem para o dono do chamado em atendimento
+            
             <Alert severity="success">
               A equipe de TI está <strong>ocupada</strong> trabalhando em sua solicitação.
               <Typography variant="body2" sx={{ mt: 1 }}>
@@ -61,7 +60,7 @@ const VisaoGeral = () => {
               </Typography>
             </Alert>
           ) : (
-            // Mensagem genérica para os outros usuários
+            
             <Alert severity="info">
               A equipe de TI está <strong>ocupada</strong> no momento.
               <Typography variant="body2" sx={{ mt: 1 }}>
@@ -75,7 +74,7 @@ const VisaoGeral = () => {
         )}
       </Paper>
       
-      {/* Card da Fila do Usuário (sem alterações) */}
+      {/* Card da Fila do Usuário */}
       <Paper elevation={3} sx={{ p: 3 }}>
         <Typography variant="h6" mb={2}>Seu Chamado na Fila</Typography>
         {queueInfo?.position ? (

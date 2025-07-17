@@ -12,7 +12,7 @@ const OrdensAndamento = () => {
     const fetchTickets = async () => {
       try {
         const response = await api.get('/tickets');
-        // A ÚNICA MUDANÇA É AQUI: filtramos por 'IN_PROGRESS'
+      
         const inProgressTickets = response.data.filter(ticket => ticket.status === 'IN_PROGRESS');
         setTickets(inProgressTickets);
       } catch (err) {

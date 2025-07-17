@@ -13,14 +13,14 @@ const ChamadosConcluidos = () => {
       try {
         const response = await api.get('/tickets');
         
-        // Lógica para a regra de 1 mês
+        
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-        // Filtramos por 'COMPLETED' E pela data de conclusão
+       
         const recentCompleted = response.data.filter(ticket => 
           ticket.status === 'COMPLETED' && new Date(ticket.completedAt) > oneMonthAgo
-        ).slice(0, 10); // Pega apenas os 10 mais recentes
+        ).slice(0, 10); 
 
         setTickets(recentCompleted);
       } catch (err) {

@@ -1,34 +1,33 @@
-// src/pages/DashboardLayout.jsx
-import React, { useState, useRef } from 'react'; // 1. Importa o useRef
+import React, { useState, useRef } from 'react';
 import { Box, CssBaseline, useTheme } from '@mui/material';
 import { Outlet } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
 
 const DRAWER_WIDTH = 180;
-const COLLAPSED_DRAWER_WIDTH = 65; // Largura da sidebar encolhida
+const COLLAPSED_DRAWER_WIDTH = 65; // Largura da sidebar
 
 export default function DashboardLayout() {
   const theme = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false); // Inicia encolhida
-  const timerRef = useRef(null); // 2. Ref para guardar a referência do timer
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false); 
+  const timerRef = useRef(null); 
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  // 3. Novas funções para controlar o hover
+  
   const handleMouseEnter = () => {
-    clearTimeout(timerRef.current); // Cancela qualquer timer de encolhimento pendente
+    clearTimeout(timerRef.current); 
     setIsSidebarExpanded(true);
   };
 
   const handleMouseLeave = () => {
-    // Inicia um timer para encolher a sidebar após 1 segundo
+  
     timerRef.current = setTimeout(() => {
       setIsSidebarExpanded(false);
-    }, 1000); // 1000 milissegundos = 1 segundo
+    }, 1000); 
   };
 
   return (
@@ -46,7 +45,7 @@ export default function DashboardLayout() {
         isSidebarExpanded={isSidebarExpanded}
         mobileOpen={mobileOpen}
         handleDrawerToggle={handleDrawerToggle}
-        // Passa as novas funções de hover para a sidebar
+    
         handleMouseEnter={handleMouseEnter}
         handleMouseLeave={handleMouseLeave}
       />

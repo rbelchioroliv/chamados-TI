@@ -1,4 +1,3 @@
-// src/pages/dashboard/ChamadosSolicitados.jsx
 import React, { useState, useEffect } from 'react';
 import { Typography, Box, CircularProgress, Alert } from '@mui/material';
 import api from '../../api';
@@ -14,7 +13,7 @@ const ChamadosSolicitados = () => {
       setLoading(true);
       try {
         const response = await api.get('/tickets');
-        // Filtramos aqui mesmo para pegar apenas os solicitados
+     
         const requestedTickets = response.data.filter(t => t.status === 'REQUESTED');
         setTickets(requestedTickets);
       } catch (err) {
